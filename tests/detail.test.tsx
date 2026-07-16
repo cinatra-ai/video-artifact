@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-import { VideoArtifactDetail, default as DefaultExport } from "../src/renderers/detail";
+import {
+  VideoArtifactDetail,
+  default as DefaultExport,
+  type VideoArtifactDetailProps,
+} from "../src/renderers/detail";
 
 afterEach(() => cleanup());
 
@@ -67,7 +71,7 @@ describe("VideoArtifactDetail — never-blank floor", () => {
   });
 
   it("degrades to a non-blank panel on a malformed snapshot (no throw)", () => {
-    const malformed = { artifact: null, urls: null } as never;
+    const malformed = { artifact: null, urls: null } as Partial<VideoArtifactDetailProps>;
     const { container } = render(<VideoArtifactDetail {...malformed} />);
     expect(container.querySelector("video")).toBeNull();
     expect(container.textContent?.length ?? 0).toBeGreaterThan(0);
