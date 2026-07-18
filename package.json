@@ -52,6 +52,19 @@
           ]
         }
       },
+      "objectTypes": [
+        {
+          "type": "@cinatra-ai/video-artifact:artifact",
+          "claim": "dedicated",
+          "dispositions": {
+            "projection": "artifact-safe"
+          },
+          "schema": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      ],
       "ui": {
         "abiVersion": 1,
         "sdkAbiRange": "^2.4.0",

@@ -1730,14 +1730,87 @@ export function validateArtifactDescriptor(a) {
     const v = a.matcherConfidenceThreshold;
     if (typeof v !== "number" || v < 0 || v > 1) errors.push("matcherConfidenceThreshold must be a number in [0,1]");
   }
+  if (a.objectTypes !== undefined) {
+    for (const e of validateArtifactObjectTypeClaims(a.objectTypes)) errors.push(e);
+  }
   if (a.ui !== undefined) {
     for (const e of validateArtifactUiShape(a.ui)) errors.push(e);
   }
   for (const k of Object.keys(a)) {
-    if (!["accepts", "satisfies", "templates", "skills", "agentDependencies", "matcherConfidenceThreshold", "ui"].includes(k)) {
+    if (!["accepts", "satisfies", "templates", "skills", "agentDependencies", "matcherConfidenceThreshold", "ui", "objectTypes"].includes(k)) {
       errors.push(`unexpected key "${k}"`);
     }
   }
+  return errors;
+}
+
+// `objectTypes` claims — mirror of the host's manifest claim-entry schema
+// (`artifactObjectTypeClaimManifestSchema` + `parseArtifactObjectTypeClaims`
+// in the monorepo's @cinatra-ai/objects claims policy leaf) so the local gate
+// and the install pipeline cannot disagree. A `kind:"artifact"` extension may
+// claim typed object rows: each entry names a namespaced object type id, a
+// claim kind ('dedicated' | 'default'), an optional strict dispositions
+// payload, and an optional inline JSON Schema for the claimed rows.
+export const CLAIMED_OBJECT_TYPE_ID_RE = /^@[\w-]+\/[\w-]+:[\w-]+$/;
+const CLAIM_KINDS = new Set(["dedicated", "default"]);
+const CLAIM_PROJECTIONS = new Set(["raw", "artifact-safe", "none"]);
+const CLAIM_SNAPSHOT_POLICIES = new Set(["content", "metadata", "none"]);
+const CLAIM_SENSITIVITIES = new Set(["normal", "sensitive"]);
+
+function validateClaimDispositions(d, at) {
+  const errors = [];
+  if (!isObj(d)) return [`${at}.dispositions must be an object`];
+  if (!CLAIM_PROJECTIONS.has(d.projection)) {
+    errors.push(`${at}.dispositions.projection must be raw|artifact-safe|none`);
+  }
+  if (d.pinnable !== undefined && typeof d.pinnable !== "boolean") {
+    errors.push(`${at}.dispositions.pinnable must be boolean`);
+  }
+  // Never-projected rows cannot be pinned into context (mirrors the host's
+  // discriminated union: projection "none" forces pinnable false).
+  if (d.projection === "none" && d.pinnable === true) {
+    errors.push(`${at}.dispositions: projection "none" forbids pinnable true`);
+  }
+  if (d.snapshotPolicy !== undefined && !CLAIM_SNAPSHOT_POLICIES.has(d.snapshotPolicy)) {
+    errors.push(`${at}.dispositions.snapshotPolicy must be content|metadata|none`);
+  }
+  if (d.redactionPolicyVersion !== undefined && !nonEmptyStr(d.redactionPolicyVersion)) {
+    errors.push(`${at}.dispositions.redactionPolicyVersion must be a non-empty string when present`);
+  }
+  if (d.sensitivity !== undefined && !CLAIM_SENSITIVITIES.has(d.sensitivity)) {
+    errors.push(`${at}.dispositions.sensitivity must be normal|sensitive`);
+  }
+  for (const k of Object.keys(d)) {
+    if (!["projection", "pinnable", "snapshotPolicy", "redactionPolicyVersion", "sensitivity"].includes(k)) {
+      errors.push(`${at}.dispositions has unexpected key "${k}"`);
+    }
+  }
+  return errors;
+}
+
+export function validateArtifactObjectTypeClaims(claims) {
+  const errors = [];
+  if (!Array.isArray(claims) || claims.length === 0) {
+    return ["objectTypes must be a non-empty array of claim entries when present"];
+  }
+  const seen = new Set();
+  claims.forEach((c, i) => {
+    const at = `objectTypes[${i}]`;
+    if (!isObj(c)) { errors.push(`${at} must be an object`); return; }
+    if (!nonEmptyStr(c.type) || !CLAIMED_OBJECT_TYPE_ID_RE.test(c.type)) {
+      errors.push(`${at}.type must be a namespaced object type id (@scope/package:local-id)`);
+    } else if (seen.has(c.type)) {
+      errors.push(`duplicate objectTypes claim for "${c.type}"`);
+    } else {
+      seen.add(c.type);
+    }
+    if (!CLAIM_KINDS.has(c.claim)) errors.push(`${at}.claim must be dedicated|default`);
+    if (c.dispositions !== undefined) errors.push(...validateClaimDispositions(c.dispositions, at));
+    if (c.schema !== undefined && !isObj(c.schema)) errors.push(`${at}.schema must be a JSON Schema object when present`);
+    for (const k of Object.keys(c)) {
+      if (!["type", "claim", "dispositions", "schema"].includes(k)) errors.push(`${at} has unexpected key "${k}"`);
+    }
+  });
   return errors;
 }
 

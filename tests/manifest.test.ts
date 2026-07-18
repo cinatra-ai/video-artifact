@@ -17,6 +17,12 @@ const pkg = JSON.parse(
     vendor: { key: string; name: string };
     artifact: {
       accepts: { file: { mimeTypes: string[] } };
+      objectTypes?: Array<{
+        type: string;
+        claim: string;
+        dispositions?: { projection?: string };
+        schema?: Record<string, unknown>;
+      }>;
       ui: {
         abiVersion: number;
         sdkAbiRange: string;
@@ -51,6 +57,26 @@ describe("video-artifact manifest — authoritative kind-gate", () => {
       "video/webm",
       "video/ogg",
     ]);
+  });
+
+  it("EXPLICITLY defines its object type (epic cinatra#1785, no derived umbrella)", () => {
+    // Types exist only by an explicit definition — the auto-derived
+    // `<package>:artifact` umbrella is retired. Keeping the definition's id
+    // equal to that former umbrella id preserves existing rows with no
+    // data migration (the Class-B retirement in the epic ruling).
+    const objectTypes = pkg.cinatra.artifact.objectTypes;
+    expect(objectTypes).toHaveLength(1);
+    expect(objectTypes?.[0]).toEqual({
+      type: "@cinatra-ai/video-artifact:artifact",
+      claim: "dedicated",
+      dispositions: { projection: "artifact-safe" },
+      schema: { type: "object", additionalProperties: true },
+    });
+  });
+
+  it("declares no `mode` field (the manifest-mode taxonomy is retired)", () => {
+    expect("mode" in pkg.cinatra).toBe(false);
+    expect("mode" in pkg.cinatra.artifact).toBe(false);
   });
 });
 
