@@ -17,6 +17,12 @@ const pkg = JSON.parse(
     vendor: { key: string; name: string };
     artifact: {
       accepts: { file: { mimeTypes: string[] } };
+      objectTypes: Array<{
+        type: string;
+        claim: string;
+        dispositions?: Record<string, unknown>;
+        schema?: Record<string, unknown>;
+      }>;
       ui: {
         abiVersion: number;
         sdkAbiRange: string;
@@ -43,6 +49,24 @@ describe("video-artifact manifest — authoritative kind-gate", () => {
   it("declares the Cinatra vendor identity + display name", () => {
     expect(pkg.cinatra.displayName).toBe("Video");
     expect(pkg.cinatra.vendor).toEqual({ key: "cinatra-ai", name: "Cinatra" });
+  });
+
+  it("explicitly defines the self-namespaced video object type it owns", () => {
+    // Ratified manifest rule (epic cinatra#1785): types exist only by explicit
+    // definition — no derived `<package>:artifact` umbrella.
+    expect(pkg.cinatra.artifact.objectTypes).toHaveLength(1);
+    const [video] = pkg.cinatra.artifact.objectTypes;
+    expect(video.type).toBe("@cinatra-ai/video-artifact:video");
+    expect(video.claim).toBe("dedicated");
+    // An uploaded/produced video file is a create-only, immutable record.
+    expect(video.dispositions).toMatchObject({
+      projection: "artifact-safe",
+      pinnable: true,
+      snapshotPolicy: "content",
+      sensitivity: "normal",
+      mutability: "record",
+    });
+    expect(video.schema).toMatchObject({ type: "object" });
   });
 
   it("accepts exactly the inline-playable video containers", () => {
