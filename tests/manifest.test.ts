@@ -83,7 +83,7 @@ describe("video-artifact ui renderer block — strict v1 contract", () => {
 
   it("is a v1 ui block with the generated SDK ABI range", () => {
     expect(ui.abiVersion).toBe(1);
-    expect(ui.sdkAbiRange).toBe("^2.4.0");
+    expect(ui.sdkAbiRange).toBe("^2.5.0");
   });
 
   it("declares only the detail slot (a non-empty partial over detail/preview)", () => {
