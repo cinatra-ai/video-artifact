@@ -94,5 +94,8 @@
         }
       }
     }
+  },
+  "exports": {
+    "./src/renderers/detail": "./src/renderers/detail.tsx"
   }
 }
