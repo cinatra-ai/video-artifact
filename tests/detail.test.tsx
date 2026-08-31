@@ -77,3 +77,68 @@ describe("VideoArtifactDetail — never-blank floor", () => {
     expect(container.textContent?.length ?? 0).toBeGreaterThan(0);
   });
 });
+
+describe("VideoArtifactDetail — the byte road (props version 2)", () => {
+  const ISLAND = "/api/lifecycle-views/artifact-bytes?bc=sealed-preview";
+  const SESSION = "/api/artifacts/abc/versions/v1/preview";
+
+  it("plays the byte reference and never the cookie-gated session route", () => {
+    const { container } = render(
+      <VideoArtifactDetail
+        propsApiVersion={2}
+        artifact={{ title: "Launch demo", mime: "video/mp4" }}
+        urls={{ preview: SESSION, download: "/dl" }}
+        actions={{ download: "/dl" }}
+        bytes={{ road: "island", preview: ISLAND, download: null }}
+      />,
+    );
+    const video = container.querySelector("video");
+    expect(video?.getAttribute("src")).toBe(ISLAND);
+    expect(container.innerHTML).not.toContain(SESSION);
+    expect(container.querySelector("article")?.getAttribute("data-byte-road")).toBe(
+      "island",
+    );
+  });
+
+  it("falls back to the session href on an older snapshot that carries no reference", () => {
+    const { container } = render(
+      <VideoArtifactDetail
+        propsApiVersion={1}
+        artifact={{ title: "Launch demo", mime: "video/mp4" }}
+        urls={{ preview: SESSION, download: "/dl" }}
+      />,
+    );
+    expect(container.querySelector("video")?.getAttribute("src")).toBe(SESSION);
+    expect(container.querySelector("article")?.getAttribute("data-byte-road")).toBe(
+      "session",
+    );
+  });
+
+  it("floors typed, never blank, when no road carries a playable address", () => {
+    const { container } = render(
+      <VideoArtifactDetail
+        propsApiVersion={1}
+        artifact={{ title: "Old clip", mime: "video/quicktime" }}
+        urls={{ preview: null, download: null }}
+      />,
+    );
+    expect(container.querySelector("video")).toBeNull();
+    expect(container.textContent).toContain("cannot be played inline");
+    expect(container.querySelector("article")?.getAttribute("data-byte-road")).toBe(
+      "none",
+    );
+  });
+
+  it("offers the reference's download address on the floor when one exists", () => {
+    const { container } = render(
+      <VideoArtifactDetail
+        propsApiVersion={2}
+        artifact={{ title: "Old clip", mime: "video/quicktime" }}
+        urls={{ preview: null, download: null }}
+        bytes={{ road: "island", preview: null, download: "/island-dl" }}
+      />,
+    );
+    expect(container.querySelector("video")).toBeNull();
+    expect(container.querySelector("a")?.getAttribute("href")).toBe("/island-dl");
+  });
+});

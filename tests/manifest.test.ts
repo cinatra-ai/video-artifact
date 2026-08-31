@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 // The authoritative, zero-dependency author-facing gate shipped in this repo.
 import { validateArtifactPackageShape } from "../extension-kind-gate.mjs";
+import { VIDEO_RENDERER_PROPS_API_VERSION } from "../src/index";
 
 const pkg = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -78,7 +79,7 @@ describe("video-artifact manifest — authoritative kind-gate", () => {
   });
 });
 
-describe("video-artifact ui renderer block — strict v1 contract", () => {
+describe("video-artifact ui renderer block — the renderer contract", () => {
   const ui = pkg.cinatra.artifact.ui;
 
   it("is a v1 ui block with the generated SDK ABI range", () => {
@@ -90,16 +91,41 @@ describe("video-artifact ui renderer block — strict v1 contract", () => {
     expect(Object.keys(ui.renderers)).toEqual(["detail"]);
   });
 
-  it("claims EXACTLY video/* and nothing else", () => {
-    expect(ui.renderers.detail.representations).toEqual(["video/*"]);
+  it("declares EXACTLY the three forms the type accepts", () => {
+    // The display's declared forms are brought to the three the type accepts;
+    // the wildcard it carried before promised forms the type refuses.
+    expect(ui.renderers.detail.representations).toEqual([
+      "video/mp4",
+      "video/webm",
+      "video/ogg",
+    ]);
+    expect(ui.renderers.detail.representations).toEqual(
+      pkg.cinatra.artifact.accepts.file.mimeTypes,
+    );
   });
 
   it("points at a package-contained renderer entry that exists on disk", () => {
     expect(ui.renderers.detail.entry).toBe("./src/renderers/detail.tsx");
-    expect(ui.renderers.detail.propsApiVersion).toBe(1);
+    expect(ui.renderers.detail.propsApiVersion).toBe(2);
+    expect(ui.renderers.detail.propsApiVersion).toBe(VIDEO_RENDERER_PROPS_API_VERSION);
     const entryAbs = fileURLToPath(
       new URL(`../${ui.renderers.detail.entry.slice(2)}`, import.meta.url),
     );
     expect(existsSync(entryAbs)).toBe(true);
+  });
+});
+
+describe("video-artifact — the renderer resolves through the package exports", () => {
+  it("names an exports subpath for the declared renderer entry", () => {
+    const pkgExports = (
+      JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+        exports: Record<string, unknown>;
+      }
+    ).exports;
+    const entry = pkg.cinatra.artifact.ui.renderers.detail.entry;
+    expect(Object.keys(pkgExports)).toContain(entry.replace(/\.tsx?$/, ""));
+    expect(
+      existsSync(fileURLToPath(new URL(`../${entry.slice(2)}`, import.meta.url))),
+    ).toBe(true);
   });
 });
