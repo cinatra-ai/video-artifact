@@ -13,6 +13,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "lucide-react": "^1.20.0"
+  },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
@@ -92,6 +95,10 @@
               "video/webm",
               "video/ogg"
             ]
+          },
+          "listRow": {
+            "entry": "./src/renderers/list-row.tsx",
+            "propsApiVersion": 1
           }
         }
       }
@@ -103,6 +110,7 @@
       "import": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./src/renderers/detail": "./src/renderers/detail.tsx"
+    "./src/renderers/detail": "./src/renderers/detail.tsx",
+    "./src/renderers/list-row": "./src/renderers/list-row.tsx"
   }
 }
