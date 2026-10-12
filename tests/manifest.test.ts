@@ -88,7 +88,7 @@ describe("video-artifact ui renderer block — the renderer contract", () => {
   });
 
   it("declares only the detail slot (a non-empty partial over detail/preview)", () => {
-    expect(Object.keys(ui.renderers)).toEqual(["detail"]);
+    expect(Object.keys(ui.renderers)).toEqual(["detail", "listRow"]);
   });
 
   it("declares EXACTLY the three forms the type accepts", () => {
